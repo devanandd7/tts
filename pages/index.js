@@ -8,13 +8,21 @@ export default function Home() {
   const [previewText, setPreviewText] = useState('Hello! This is a sample.');
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Load available voices
   useEffect(() => {
     const loadVoices = () => {
-      const allVoices = window.speechSynthesis.getVoices();
-      setVoices(allVoices);
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length !== 0) {
+        setVoices(availableVoices);
+      }
     };
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
+
+    // If voices not loaded immediately, wait for 'voiceschanged' event
+    if (typeof window !== 'undefined') {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
@@ -22,9 +30,9 @@ export default function Home() {
 
   const playVoice = (voice, text) => {
     if (!voice || !text || isSpeaking) return;
-    setIsSpeaking(true);
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;
+    setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
   };
@@ -63,16 +71,16 @@ export default function Home() {
 
   const handleDownload = async () => {
     alert("🚫 Download feature is not working currently. It will be available in a future update.");
-    return;
   };
 
   const getFilteredVoices = (gender) => {
-    const lower = gender.toLowerCase();
-    return voices.filter(v =>
-      v.name.toLowerCase().includes(lower) ||
-      (lower === 'male' && v.name.toLowerCase().includes('daniel')) ||
-      (lower === 'female' && v.name.toLowerCase().includes('samantha'))
-    );
+    const g = gender.toLowerCase();
+    return voices.filter(v => {
+      const name = v.name.toLowerCase();
+      if (g === 'male') return name.includes('daniel') || name.includes('male');
+      if (g === 'female') return name.includes('samantha') || name.includes('female');
+      return false;
+    });
   };
 
   return (
@@ -96,7 +104,6 @@ export default function Home() {
               onChange={(e) => setText(e.target.value)}
             />
 
-            {/* Copy Sample Script Button */}
             <button
               onClick={() => {
                 const sample = `Person A - Hello! How are you?\nPerson B - I'm great, thanks! How about you?\nPerson A - Doing well! It's a nice day.`;
@@ -110,12 +117,14 @@ export default function Home() {
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Male Voice Selection */}
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Male Voice:</label>
                 <div className="flex items-center space-x-2">
                   <select
                     className="shadow border rounded w-full py-2 px-3 text-gray-700"
                     onChange={(e) => setMaleVoice(voices.find(v => v.name === e.target.value))}
+                    value={maleVoice?.name || ''}
                   >
                     <option value="">Select Male Voice</option>
                     {getFilteredVoices('male').map(v => (
@@ -125,19 +134,21 @@ export default function Home() {
                   <button
                     onClick={() => playVoice(maleVoice, previewText)}
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    disabled={isSpeaking}
+                    disabled={isSpeaking || !maleVoice}
                   >
                     Preview
                   </button>
                 </div>
               </div>
 
+              {/* Female Voice Selection */}
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Female Voice:</label>
                 <div className="flex items-center space-x-2">
                   <select
                     className="shadow border rounded w-full py-2 px-3 text-gray-700"
                     onChange={(e) => setFemaleVoice(voices.find(v => v.name === e.target.value))}
+                    value={femaleVoice?.name || ''}
                   >
                     <option value="">Select Female Voice</option>
                     {getFilteredVoices('female').map(v => (
@@ -147,7 +158,7 @@ export default function Home() {
                   <button
                     onClick={() => playVoice(femaleVoice, previewText)}
                     className="bg-pink-500 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded"
-                    disabled={isSpeaking}
+                    disabled={isSpeaking || !femaleVoice}
                   >
                     Preview
                   </button>
