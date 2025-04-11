@@ -11,22 +11,27 @@ export default function Home() {
   // Load available voices
   useEffect(() => {
     const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length !== 0) {
-        setVoices(availableVoices);
+      const allVoices = window.speechSynthesis.getVoices();
+      if (allVoices.length > 0) {
+        setVoices(allVoices);
       }
     };
-
-    // If voices not loaded immediately, wait for 'voiceschanged' event
+  
     if (typeof window !== 'undefined') {
+      window.speechSynthesis.onvoiceschanged = () => {
+        loadVoices();
+      };
+  
+      // Try loading voices immediately
       loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
     }
-
+  
+    // Clean up
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
+  
 
   const playVoice = (voice, text) => {
     if (!voice || !text || isSpeaking) return;
